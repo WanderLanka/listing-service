@@ -9,14 +9,15 @@ const router = express.Router();
 // Supports pagination, search by first/last name, and approved filter
 router.get('/', validate(listGuidesQuery), async (req, res, next) => {
   try {
-    const { page, limit, q, approved } = req.query;
+    const { page, limit, q, status } = req.query;
 
     const filter = { role: 'guide' };
 
-    // Only approved guides
-    if (approved === true) {
-      filter['guideDetails.approvedAt'] = { $ne: null };
-      filter.status = { $in: ['active'] };
+    // Filter by status; default to active when not provided
+    if (status) {
+      filter.status = status;
+    } else {
+      filter.status = 'active';
     }
 
     // Basic search on first/last name (case-insensitive)
@@ -37,7 +38,6 @@ router.get('/', validate(listGuidesQuery), async (req, res, next) => {
       status: 1,
       'guideDetails.firstName': 1,
       'guideDetails.lastName': 1,
-      'guideDetails.approvedAt': 1,
     };
 
     const [items, total] = await Promise.all([
