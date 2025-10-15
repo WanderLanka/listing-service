@@ -1,26 +1,19 @@
 const express = require('express');
-const User = require('../models/User');
-const validate = require('../middleware/validate');
-const { listGuidesQuery } = require('../validators/guideValidators');
+const User = require('../../models/User');
+const validate = require('../../middleware/validate');
+const { listGuidesQuery } = require('../../validators/guideValidators');
 
 const router = express.Router();
 
-// GET /guides
-// Supports pagination, search by first/last name, and approved filter
+// GET /tourguide-listing/allguides
+// Supports pagination, search by first/last name/username, and status filter (defaults to active)
 router.get('/', validate(listGuidesQuery), async (req, res, next) => {
   try {
     const { page, limit, q, status } = req.query;
 
     const filter = { role: 'guide' };
+    filter.status = status || 'active';
 
-    // Filter by status; default to active when not provided
-    if (status) {
-      filter.status = status;
-    } else {
-      filter.status = 'active';
-    }
-
-    // Basic search on first/last name (case-insensitive)
     if (q) {
       filter.$or = [
         { 'guideDetails.firstName': { $regex: q, $options: 'i' } },
@@ -41,7 +34,11 @@ router.get('/', validate(listGuidesQuery), async (req, res, next) => {
     };
 
     const [items, total] = await Promise.all([
-      User.find(filter, projection).sort({ 'guideDetails.firstName': 1, 'guideDetails.lastName': 1 }).skip(skip).limit(limit).lean(),
+      User.find(filter, projection)
+        .sort({ 'guideDetails.firstName': 1, 'guideDetails.lastName': 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       User.countDocuments(filter),
     ]);
 
